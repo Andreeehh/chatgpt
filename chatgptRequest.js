@@ -86,7 +86,7 @@ async function createPost(jwt, data = {}) {
 
 // Exemplo de uso
 async function main() {
-  const userInput = `Crie mais um post do blog, deve conter um título vindo do prefixo, um resumo curto de no máximo 150 caracteres, e o conteúdo, que pode conter tags html e ser mais longo`;
+  const userInput = `Crie mais um post do blog, deve conter um título vindo do prefixo, um resumo curto de no máximo 150 caracteres, e o conteúdo, que pode conter tags html e ser mais longo, separando os paragrafos em tag <p>`;
   const chatResponseContent = await sendChatRequest(userInput);
   // console.log("Resposta do ChatGPT Titulo:", chatResponseContent);
   const titleRegex = /Título:(.*?)\n/;
