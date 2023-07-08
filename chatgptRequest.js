@@ -125,4 +125,31 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-main();
+// Função para agendar a execução do build hook uma vez por dia
+function scheduleDailyExecution() {
+  // Obter a data e hora atual
+  const now = new Date();
+
+  // Definir o horário de execução para as 8h da manhã
+  const scheduledTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+
+  // Calcular o tempo restante até o próximo agendamento
+  let delay = scheduledTime.getTime() - now.getTime();
+  if (delay < 0) {
+    // Se já passou das 8h da manhã, agendar para o próximo dia
+    delay += 24 * 60 * 60 * 1000;
+  }
+
+  // Agendar a execução
+  setTimeout(() => {
+    main();
+
+    // Agendar a próxima execução
+    scheduleDailyExecution();
+  }, delay);
+}
+
+// Iniciar o agendamento da execução
+scheduleDailyExecution();
+
+
