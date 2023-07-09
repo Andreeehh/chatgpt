@@ -86,7 +86,7 @@ async function createPost(jwt, data = {}) {
 
 // Exemplo de uso
 async function main() {
-  const userInput = `Crie mais um post do blog, deve conter um título vindo do prefixo, um resumo curto de no máximo 150 caracteres, e o conteúdo, que pode conter tags html e ser mais longo, separando os paragrafos em tag <p>`;
+  const userInput = `Crie mais um post do blog, deve conter um título vindo do prefixo "Título:", um resumo, vindo do prefixo "Resumo:", curto de no máximo 150 caracteres, e o conteúdo, vindo do prefixo "Conteúdo:", que pode conter tags html e ser mais longo, separando os paragrafos em tag <p>`;
   const chatResponseContent = await sendChatRequest(userInput);
   // console.log("Resposta do ChatGPT Titulo:", chatResponseContent);
   const titleRegex = /Título:(.*?)\n/;
@@ -97,15 +97,38 @@ async function main() {
   const excerptMatch = chatResponseContent.match(excerptRegex);
   const contentMatch = chatResponseContent.match(contentRegex);
 
-  const title = titleMatch ? titleMatch[1].trim() : '';
-  const excerpt = excerptMatch ? excerptMatch[1].trim() : '';
-  const content = contentMatch ? contentMatch[1].trim() : '';
-  const slug = title.replace(" ", "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase().slice(0, 50);
+  let title = titleMatch ? titleMatch[1].trim() : '';
+  if (!title){
+    const input = `Crie um titulo do post do blog, começando direto do título`;
+    title = await sendChatRequest(input);
+  }
+  let excerpt = excerptMatch ? excerptMatch[1].trim() : '';
+  if (!excerpt){
+    const input = `Crie um resumo curto (240 chars) do post do blog, começando direto do resumo`;
+    excerpt = await sendChatRequest(input);
+  }
+  let content = contentMatch ? contentMatch[1].trim() : '';
+  if (!content){
+    const input = `Crie um conteúdo do post do blog, começando direto do conteúdo`;
+    content = await sendChatRequest(input);
+  }
+  let slug = title.replace(/ /g, "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase();
+  if (slug.length > 50){
+    slug = slug.slice(0, 49)
+  }
+  if (excerpt.length > 250){
+    excerpt = excerpt.slice(0, 249)
+  }
+
+  if (content.includes("```")){
+    content = prettifyCodeContent(content);
+  }
+  
 
   const data = {
     title,
     slug,
-    except: excerpt.slice(0, 249),
+    except: excerpt,
     content,
     cover: randomInt(2, 100),
     categories: [4, 3, 5],
@@ -123,6 +146,20 @@ function randomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function prettifyCodeContent(content){
+  let index = 0;
+  while (content.includes("```")){
+    if (index == 0){
+      content = content.replace(/```/, '<pre><code class="language-plaintext">');
+      index = 1
+    } else {
+      content = content.replace(/```/, "</code></pre>");
+      index = 0
+    }
+  }
+  return content;
 }
 
 // Função para agendar a execução do build hook uma vez por dia
@@ -151,5 +188,6 @@ function scheduleDailyExecution() {
 
 // Iniciar o agendamento da execução
 scheduleDailyExecution();
+// main();
 
 
