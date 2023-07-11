@@ -14,7 +14,7 @@ async function sendChatRequest(message) {
           {
             role: "system",
             content:
-              "Você é um author de blog de tecnologia web, principais temas, React, Javascript, Estudo para emprego na europa, o post pode ter exemplos de código.",
+              "Você é um author de blog de tecnologia web, viagens pelo mundo, e qualquer tema que esteja nas tendências na notícia, crie um post, o post pode ter exemplos de código, emojis, conteúdo markdown, no conteúdo as quebras de linha devem ser substituídas por tags <br>, lembre-se, toda a resposta estará no post, então seja direto para a resposta.",
           },
           { role: "user", content: message },
         ],
@@ -30,6 +30,7 @@ async function sendChatRequest(message) {
 
     // Retornar a resposta do ChatGPT
     const reply = response.data.choices[0].message.content;
+    console.log("resposta gerada")
     return reply;
   } catch (error) {
     console.error("Erro ao enviar a requisição para o ChatGPT:", error);
@@ -52,9 +53,10 @@ async function getJWT() {
   try {
     const response = await axios.post(url, body, config);
     const jwt = response.data.jwt;
+    console.log("jwt gerado")
     return jwt;
   } catch (error) {
-    // console.error('Erro ao obter JWT do Strapi:', error.response.data);
+    console.error('Erro ao obter JWT do Strapi:', error.response.data);
     // throw error;
   }
 }
@@ -64,8 +66,6 @@ async function createPost(jwt, data = {}) {
   const body = {
     data: data,
   };
-  console.log("body", body)
-  console.log("data", data)
   const config = {
     headers: {
       'Authorization': `Bearer ${jwt}`,
@@ -76,6 +76,7 @@ async function createPost(jwt, data = {}) {
 
   try {
     const response = await axios.post(url, body, config);
+    console.log("post gerado")
     return response.data;
   } catch (error) {
     console.error('Erro ao criar post:', error.response.data);
@@ -86,7 +87,7 @@ async function createPost(jwt, data = {}) {
 
 // Exemplo de uso
 async function main() {
-  const userInput = `Crie mais um post do blog, deve conter um título vindo do prefixo "Título:", um resumo, vindo do prefixo "Resumo:", curto de no máximo 150 caracteres, e o conteúdo, vindo do prefixo "Conteúdo:", que pode conter tags html e ser mais longo, separando os paragrafos em tag <p>`;
+  const userInput = `Crie mais um post do blog, deve conter estar separado por um Título, um Resumo curto de no máximo 150 caracteres, e o Conteúdo markdown que pode conter tags html, separando os parágrafos em tag <p>, cabeçalhos em <h1>, e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1> as partes importantes`;
   const chatResponseContent = await sendChatRequest(userInput);
   // console.log("Resposta do ChatGPT Titulo:", chatResponseContent);
   const titleRegex = /Título:(.*?)\n/;
@@ -104,12 +105,12 @@ async function main() {
   }
   let excerpt = excerptMatch ? excerptMatch[1].trim() : '';
   if (!excerpt){
-    const input = `Crie um resumo curto (240 chars) do post do blog, começando direto do resumo`;
+    const input = `Crie um resumo curto (240 chars) do post do blog com esse título ${title}, começando direto do resumo`;
     excerpt = await sendChatRequest(input);
   }
   let content = contentMatch ? contentMatch[1].trim() : '';
   if (!content){
-    const input = `Crie um conteúdo do post do blog, começando direto do conteúdo`;
+    const input = `Crie um conteúdo do post do blog com esse título ${title}, Conteúdo markdown que pode conter tags html, separando os parágrafos em tag <p>, cabeçalhos em <h1>, <h2>, etc., e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1>, <h2>, etc. as partes importantes, começando direto do conteúdo`;
     content = await sendChatRequest(input);
   }
   let slug = title.replace(/ /g, "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase();
@@ -120,23 +121,26 @@ async function main() {
     excerpt = excerpt.slice(0, 249)
   }
 
+
   if (content.includes("```")){
     content = prettifyCodeContent(content);
-  }
-  
+  } 
+
 
   const data = {
     title,
     slug,
     except: excerpt,
-    content,
-    cover: randomInt(2, 100),
+    content: content,
+    cover: randomInt(6, 369),
     categories: [4, 3, 5],
     tags: [3],
     author: 2,
   }
 
   const jwt = await getJWT()
+
+  console.log(content)
 
   await createPost(jwt, data)
   
@@ -150,16 +154,17 @@ function randomInt(min, max) {
 
 function prettifyCodeContent(content){
   let index = 0;
+  content = content.toString().replace(/\n/g, "<br>");
   while (content.includes("```")){
     if (index == 0){
-      content = content.replace(/```/, '<pre><code class="language-plaintext">');
+      content = content.toString().replace(/```/, '<pre><code class="language-plaintext">');
       index = 1
     } else {
-      content = content.replace(/```/, "</code></pre>");
+      content = content.toString().replace(/```/, "</code></pre>");
       index = 0
     }
   }
-  return content;
+  return content.toString();
 }
 
 // Função para agendar a execução do build hook uma vez por dia
@@ -186,8 +191,8 @@ function scheduleDailyExecution() {
   }, delay);
 }
 
-// Iniciar o agendamento da execução
+Iniciar o agendamento da execução
 scheduleDailyExecution();
-// main();
+main();
 
 
