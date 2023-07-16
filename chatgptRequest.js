@@ -14,7 +14,7 @@ async function sendChatRequest(message) {
           {
             role: "system",
             content:
-              "Você é um author de blog de tecnologia web, viagens pelo mundo, e qualquer tema que esteja nas tendências na notícia, crie um post, o post pode ter exemplos de código, emojis, conteúdo markdown, no conteúdo as quebras de linha devem ser substituídas por tags <br>, lembre-se, toda a resposta estará no post, então seja direto para a resposta.",
+              "Você é um author de blog de tecnologia web, hospedado nesse link 'https://blog-project-kappa-one.vercel.app/', saúde e exercícios físicos, basquete, viagens pelo mundo, inteligência artificial, e qualquer tema que esteja nas tendências na notícia, crie um post em indentado com tags html, o post, pode ter exemplos de código, emojis, no conteúdo as quebras de linha devem ser substituídas por tags <br>, as informações mais importantes podem ser divididas por tags h, <h1> <h2> etc, links com tags <a> com propriedade href='link a ser inserido', algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias, exemplo <img src='' alt=''>, mas com uma src diferente, lembre-se, toda a resposta estará no post, então seja direto para a resposta.",
           },
           { role: "user", content: message },
         ],
@@ -85,11 +85,12 @@ async function createPost(jwt, data = {}) {
 }
 
 
+
+
 // Exemplo de uso
 async function main() {
-  const userInput = `Crie mais um post do blog, deve conter estar separado por um Título, um Resumo curto de no máximo 150 caracteres, e o Conteúdo markdown que pode conter tags html, separando os parágrafos em tag <p>, cabeçalhos em <h1>, e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1> as partes importantes`;
+  const userInput = `Crie mais um post do blog, deve conter estar separado por um Título, que não pode conter tags html, um Resumo curto de no máximo 150 caracteres, que não pode conter tags html, e o Conteúdo que pode conter tags html, começando direto do body, sem styles, separando os parágrafos em tag <p>, cabeçalhos em <h1>, e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com <h1> as partes importantes, algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias, exemplo <img src='' alt=''>, mas com uma src diferente`;
   const chatResponseContent = await sendChatRequest(userInput);
-  // console.log("Resposta do ChatGPT Titulo:", chatResponseContent);
   const titleRegex = /Título:(.*?)\n/;
   const excerptRegex = /Resumo:(.*?)\n\n/;
   const contentRegex = /Conteúdo:\n\n([\s\S]*)/;
@@ -97,20 +98,22 @@ async function main() {
   const titleMatch = chatResponseContent.match(titleRegex);
   const excerptMatch = chatResponseContent.match(excerptRegex);
   const contentMatch = chatResponseContent.match(contentRegex);
-
+  const tagRegex = /<[^>]+>/g;
   let title = titleMatch ? titleMatch[1].trim() : '';
   if (!title){
     const input = `Crie um titulo do post do blog, começando direto do título`;
     title = await sendChatRequest(input);
   }
+  title = title.replace(tagRegex, "");
   let excerpt = excerptMatch ? excerptMatch[1].trim() : '';
   if (!excerpt){
     const input = `Crie um resumo curto (240 chars) do post do blog com esse título ${title}, começando direto do resumo`;
     excerpt = await sendChatRequest(input);
   }
+  excerpt.replace(tagRegex, "");
   let content = contentMatch ? contentMatch[1].trim() : '';
   if (!content){
-    const input = `Crie um conteúdo do post do blog com esse título ${title}, Conteúdo markdown que pode conter tags html, separando os parágrafos em tag <p>, cabeçalhos em <h1>, <h2>, etc., e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1>, <h2>, etc. as partes importantes, começando direto do conteúdo`;
+    const input = `Crie um conteúdo do post do blog com esse título ${title}, Conteúdo que pode conter tags html, começando direto do body, sem styles, separando os parágrafos em tag <p>, cabeçalhos em <h1>, <h2>, etc., links com tags <a> com propriedade href="link a ser inserido", e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1>, <h2>, etc. as partes importantes, algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias , exemplo <img src='' alt=''>, começando direto do conteúdo`;
     content = await sendChatRequest(input);
   }
   let slug = title.replace(/ /g, "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase();
@@ -122,9 +125,10 @@ async function main() {
   }
 
 
-  if (content.includes("```")){
-    content = prettifyCodeContent(content);
-  } 
+  content = await prettifyCodeContent(content);
+
+  console.log (content)
+  
 
 
   const data = {
@@ -140,8 +144,6 @@ async function main() {
 
   const jwt = await getJWT()
 
-  console.log(content)
-
   await createPost(jwt, data)
   
 }
@@ -154,7 +156,7 @@ function randomInt(min, max) {
 
 function prettifyCodeContent(content){
   let index = 0;
-  content = content.toString().replace(/\n/g, "<br>");
+  content = content.replace(/#/g, "");
   while (content.includes("```")){
     if (index == 0){
       content = content.toString().replace(/```/, '<pre><code class="language-plaintext">');
@@ -164,35 +166,41 @@ function prettifyCodeContent(content){
       index = 0
     }
   }
-  return content.toString();
+  return updateContentWithRandomImage(content).then(updatedContent => {
+    return updatedContent; // Imprime o conteúdo atualizado
+  });
 }
 
-// Função para agendar a execução do build hook uma vez por dia
-function scheduleDailyExecution() {
-  // Obter a data e hora atual
-  const now = new Date();
-
-  // Definir o horário de execução para as 8h da manhã
-  const scheduledTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
-
-  // Calcular o tempo restante até o próximo agendamento
-  let delay = scheduledTime.getTime() - now.getTime();
-  if (delay < 0) {
-    // Se já passou das 8h da manhã, agendar para o próximo dia
-    delay += 24 * 60 * 60 * 1000;
+function updateContentWithRandomImage(content) {
+  
+  if (!content.includes("src=''") && !content.includes('src=""')) {
+    return Promise.resolve(content); // Retorna a promessa resolvida quando não há mais tags "src" vazias
   }
 
-  // Agendar a execução
-  setTimeout(() => {
-    main();
+  return getRandomImageUrl().then(r => {
+    content = content.toString().replace(/src=''|src=""/, `src='${r.imageUrl}'`);
+    content = content.toString().replace(/alt=''|alt=""/, `alt='${r.imageAltText}'`);
 
-    // Agendar a próxima execução
-    scheduleDailyExecution();
-  }, delay);
+    return updateContentWithRandomImage(content); // Chama recursivamente a função para atualizar novamente o conteúdo
+  });
 }
 
-Iniciar o agendamento da execução
-scheduleDailyExecution();
+async function getRandomImageUrl() {
+  const apiKey = process.env.UNSPLASH_API_KEY;
+  const endpoint = `https://api.unsplash.com/photos/random?client_id=${apiKey}`;
+
+  try {
+    const response = await axios.get(endpoint);
+    const imageUrl = response.data.urls.regular;
+    const imageAltText = response.data.alt_description;
+    return { imageUrl, imageAltText };
+  } catch (error) {
+    console.log('Ocorreu um erro:', error);
+  }
+}
+
 main();
+
+
 
 
