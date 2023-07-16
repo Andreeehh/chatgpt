@@ -14,7 +14,7 @@ async function sendChatRequest(message) {
           {
             role: "system",
             content:
-              "Você é um author de blog de tecnologia web, hospedado nesse link 'https://blog-project-kappa-one.vercel.app/', saúde e exercícios físicos, basquete, viagens pelo mundo, inteligência artificial, e qualquer tema que esteja nas tendências na notícia, crie um post em indentado com tags html, o post, pode ter exemplos de código, emojis, no conteúdo as quebras de linha devem ser substituídas por tags <br>, as informações mais importantes podem ser divididas por tags h, <h1> <h2> etc, links com tags <a> com propriedade href='link a ser inserido', algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias, exemplo <img src='' alt=''>, mas com uma src diferente, lembre-se, toda a resposta estará no post, então seja direto para a resposta.",
+              "Você é um author de blog de tecnologia web, hospedado nesse link 'https://blog-project-kappa-one.vercel.app/' os temas são, saúde e exercícios físicos, basquete, viagens pelo mundo, inteligência artificial, e qualquer tema que esteja nas tendências na notícia, crie um post em indentado com tags html, o post, pode ter exemplos de código, emojis, no conteúdo as quebras de linha devem ser substituídas por tags <br>, as informações mais importantes podem ser divididas por tags h, <h1> <h2> etc, links com tags <a> com propriedade href='link a ser inserido', algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias, exemplo <img src='' alt=''>, mas com uma src diferente, lembre-se, toda a resposta estará no post, então seja direto para a resposta.",
           },
           { role: "user", content: message },
         ],
@@ -98,7 +98,7 @@ async function main() {
   const titleMatch = chatResponseContent.match(titleRegex);
   const excerptMatch = chatResponseContent.match(excerptRegex);
   const contentMatch = chatResponseContent.match(contentRegex);
-  const tagRegex = /<[^>]+>/g;
+  const tagRegex = /<[^>]*>/g;
   let title = titleMatch ? titleMatch[1].trim() : '';
   if (!title){
     const input = `Crie um titulo do post do blog, começando direto do título`;
@@ -123,11 +123,14 @@ async function main() {
   if (excerpt.length > 250){
     excerpt = excerpt.slice(0, 249)
   }
+  const input = `Define a one word category, for search parameter to the unsplash API, about the title ${title}, in english`;
+  const category = await sendChatRequest(input);
 
-
-  content = await prettifyCodeContent(content);
-
+  console.log (category)
+  content = await prettifyCodeContent(content, category);
   console.log (content)
+
+  
   
 
 
@@ -154,7 +157,7 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function prettifyCodeContent(content){
+function prettifyCodeContent(content, category){
   let index = 0;
   content = content.replace(/#/g, "");
   while (content.includes("```")){
@@ -166,18 +169,18 @@ function prettifyCodeContent(content){
       index = 0
     }
   }
-  return updateContentWithRandomImage(content).then(updatedContent => {
+  return updateContentWithRandomImage(content, category).then(updatedContent => {
     return updatedContent; // Imprime o conteúdo atualizado
   });
 }
 
-function updateContentWithRandomImage(content) {
+function updateContentWithRandomImage(content, category) {
   
   if (!content.includes("src=''") && !content.includes('src=""')) {
     return Promise.resolve(content); // Retorna a promessa resolvida quando não há mais tags "src" vazias
   }
 
-  return getRandomImageUrl().then(r => {
+  return getRandomImageUrlByCategory(category).then(r => {
     content = content.toString().replace(/src=''|src=""/, `src='${r.imageUrl}'`);
     content = content.toString().replace(/alt=''|alt=""/, `alt='${r.imageAltText}'`);
 
@@ -196,6 +199,26 @@ async function getRandomImageUrl() {
     return { imageUrl, imageAltText };
   } catch (error) {
     console.log('Ocorreu um erro:', error);
+  }
+}
+
+async function getRandomImageUrlByCategory(category) {
+  const apiKey = process.env.UNSPLASH_API_KEY; // Replace with your Unsplash API key
+  const endpoint = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(category)}&per_page=10&client_id=${apiKey}`;
+
+  try {
+    const response = await axios.get(endpoint);
+    const results = response.data.results;
+
+    if (results.length > 0) {
+      const randomIndex = Math.floor(Math.random() * results.length);
+      const imageUrl = results[randomIndex].urls.regular;
+      const imageAltText = results[randomIndex].alt_description;
+      return { imageUrl, imageAltText };
+    }
+  } catch (error) {
+    return getRandomImageUrl().then(r => {return r})
+    console.log('Error:', error);
   }
 }
 
