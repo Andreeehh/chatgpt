@@ -89,33 +89,18 @@ async function createPost(jwt, data = {}) {
 
 // Exemplo de uso
 async function main() {
-  const userInput = `Crie mais um post do blog, deve conter estar separado por um Título, que não pode conter tags html, um Resumo curto de no máximo 150 caracteres, que não pode conter tags html, e o Conteúdo que pode conter tags html, começando direto do body, sem styles, separando os parágrafos em tag <p>, cabeçalhos em <h1>, e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com <h1> as partes importantes, algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias, exemplo <img src='' alt=''>, mas com uma src diferente`;
-  const chatResponseContent = await sendChatRequest(userInput);
-  const titleRegex = /Título:(.*?)\n/;
-  const excerptRegex = /Resumo:(.*?)\n\n/;
-  const contentRegex = /Conteúdo:\n\n([\s\S]*)/;
-
-  const titleMatch = chatResponseContent.match(titleRegex);
-  const excerptMatch = chatResponseContent.match(excerptRegex);
-  const contentMatch = chatResponseContent.match(contentRegex);
   const tagRegex = /<[^>]*>/g;
-  let title = titleMatch ? titleMatch[1].trim() : '';
-  if (!title){
-    const input = `Crie um titulo do post do blog, começando direto do título`;
-    title = await sendChatRequest(input);
-  }
+  const inputTitle = `Crie um titulo do post do blog, começando direto do título`;
+  let title = await sendChatRequest(inputTitle);
+  
   title = title.replace(tagRegex, "");
-  let excerpt = excerptMatch ? excerptMatch[1].trim() : '';
-  if (!excerpt){
-    const input = `Crie um resumo curto (240 chars) do post do blog com esse título ${title}, começando direto do resumo`;
-    excerpt = await sendChatRequest(input);
-  }
+  const inputExcerpt = `Crie um resumo curto (240 chars) do post do blog com esse título ${title}, começando direto do resumo`;
+  let excerpt = await sendChatRequest(inputExcerpt);
+  
   excerpt.replace(tagRegex, "");
-  let content = contentMatch ? contentMatch[1].trim() : '';
-  if (!content){
-    const input = `Crie um conteúdo do post do blog com esse título ${title}, Conteúdo que pode conter tags html, começando direto do body, sem styles, separando os parágrafos em tag <p>, cabeçalhos em <h1>, <h2>, etc., links com tags <a> com propriedade href="link a ser inserido", e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1>, <h2>, etc. as partes importantes, algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias , exemplo <img src='' alt=''>, começando direto do conteúdo`;
-    content = await sendChatRequest(input);
-  }
+  const inputContent = `Crie um conteúdo do post do blog com esse título ${title}, Conteúdo que pode conter tags html, começando direto do body, sem styles, separando os parágrafos em tag <p>, cabeçalhos em <h1>, <h2>, etc., links com tags <a> com propriedade href="link a ser inserido", e ser mais longo, no conteúdo as quebras de linha devem ser substituídas por tags <br>, marcando com # ou <h1>, <h2>, etc. as partes importantes, algumas tags <img> espalhadas pelo conteúdo com um src e alt vazias , exemplo <img src='' alt=''>, começando direto do conteúdo`;
+  let content = await sendChatRequest(inputContent);
+  
   let slug = title.replace(/ /g, "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase();
   if (slug.length > 50){
     slug = slug.slice(0, 49)
@@ -126,9 +111,10 @@ async function main() {
   const input = `Define a one word category, for search parameter to the unsplash API, about the title ${title}, in english`;
   const category = await sendChatRequest(input);
 
-  console.log (category)
+  console.log(category)
+  console.log("Possuí src", content.includes("src=''") || content.includes("src=''"))
   content = await prettifyCodeContent(content, category);
-  console.log (content)
+  console.log(content)
 
   
   
