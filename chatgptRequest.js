@@ -161,7 +161,7 @@ async function main()
 	let slug = title.replace(/ /g, "-").replace(/[^0-9a-zA-Z-]+/g, "").toLowerCase();
 	if (slug.length > 50)
 	{
-		slug = slug.slice(0, 49)
+		slug = slug.slice(0, 40) + randomInt(0, 1000).toString().padStart(4, '0')
 	}
 	if (excerpt.length > 250)
 	{
